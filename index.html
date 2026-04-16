@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Réserver ma Course</title>
+    <title>Réserver ma Course - MyVTC</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCEXSxA3B15lE5w2Dzk-JHwEanBppS14IQ&libraries=places"></script>
+    
     <style>
         :root {
-            --primary-color: #25D366; /* Vert WhatsApp */
+            --primary-color: #25D366;
             --dark-color: #075E54;
             --bg-color: #f4f7f6;
+            --accent-color: #34b7f1;
         }
 
         body {
@@ -26,40 +29,37 @@
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
         }
 
-        h2 {
-            color: var(--dark-color);
-            margin-top: 0;
-            text-align: center;
-            font-size: 1.5rem;
-        }
+        h2 { color: var(--dark-color); margin-top: 0; text-align: center; }
 
-        .form-group {
-            margin-bottom: 15px;
-        }
+        .form-group { margin-bottom: 15px; }
 
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-            font-size: 0.9rem;
-        }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 0.9rem; }
 
-        input {
+        input, select {
             width: 100%;
             padding: 12px;
             border: 1px solid #ddd;
             border-radius: 8px;
             box-sizing: border-box;
             font-size: 1rem;
-            outline: none;
         }
 
-        input:focus {
-            border-color: var(--primary-color);
+        .price-box {
+            background: #e7f3ef;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+            border: 1px dashed var(--primary-color);
+        }
+
+        .price-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--dark-color);
         }
 
         button {
@@ -72,99 +72,153 @@
             font-size: 1.1rem;
             font-weight: bold;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             transition: background 0.3s;
         }
 
-        button:hover {
-            background-color: #128C7E;
-        }
-
-        button img {
-            width: 24px;
-            margin-right: 10px;
-        }
-
-        .footer {
-            text-align: center;
-            font-size: 0.8rem;
-            color: #999;
-            margin-top: 20px;
-        }
+        button:hover { background-color: #128C7E; }
+        
+        .details { font-size: 0.8rem; color: #666; margin-top: 5px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>🚕 Réserver un chauffeur</h2>
+    <h2>🚕 Réserver mon VTC</h2>
     
     <div class="form-group">
-        <label for="nom">Nom complet</label>
-        <input type="text" id="nom" placeholder="Ex: Jean Dupont">
+        <label>Nom complet</label>
+        <input type="text" id="nom" placeholder="Jean Dupont">
     </div>
 
     <div class="form-group">
-        <label for="depart">Lieu de départ</label>
-        <input type="text" id="depart" placeholder="Adresse, Gare, Aéroport...">
+        <label>Lieu de départ</label>
+        <input type="text" id="depart" placeholder="Saisissez une adresse...">
     </div>
 
     <div class="form-group">
-        <label for="arrivee">Destination</label>
-        <input type="text" id="arrivee" placeholder="Adresse d'arrivée">
+        <label>Destination</label>
+        <input type="text" id="arrivee" placeholder="Saisissez une destination...">
     </div>
 
     <div class="form-group">
-        <label for="date_heure">Date et Heure</label>
-        <input type="datetime-local" id="date_heure">
+        <label>Date et Heure</label>
+        <input type="datetime-local" id="date_heure" onchange="calculerTrajet()">
+    </div>
+
+    <div id="resultat_calcul" class="price-box" style="display:none;">
+        <div>Estimation du prix</div>
+        <div class="price-value" id="prix_affiche">0.00 €</div>
+        <div class="details" id="infos_trajet">-- km | -- min</div>
     </div>
 
     <button onclick="envoyerWhatsApp()">
-        Confirmer via WhatsApp
+        Valider et Envoyer via WhatsApp
     </button>
-
-    <div class="footer">
-        Validation instantanée par message
-    </div>
 </div>
 
 <script>
+    // --- CONFIGURATION TARIFAIRE (A ajuster selon MyVTC) ---
+    const CONFIG = {
+        priseEnCharge: 3.00,
+        tarifKm: 1.50,
+        tarifMinimum: 15.00,
+        coeffNuit: 1.50, // +20%
+        coeffDimanche: 1.30, // +25%
+        numWhatsApp: "33684523297"
+    };
+
+    let distanceKm = 0;
+    let dureeMinutes = 0;
+    let prixFinal = 0;
+
+    // Initialisation Google Autocomplete
+    function initAutocomplete() {
+        const options = { componentRestrictions: { country: "fr" }, fields: ["formatted_address"] };
+        const autoDep = new google.maps.places.Autocomplete(document.getElementById('depart'), options);
+        const autoArr = new google.maps.places.Autocomplete(document.getElementById('arrivee'), options);
+
+        autoDep.addListener('place_changed', calculerTrajet);
+        autoArr.addListener('place_changed', calculerTrajet);
+    }
+
+    // Calcul de la distance et du prix
+    function calculerTrajet() {
+        const origin = document.getElementById('depart').value;
+        const destination = document.getElementById('arrivee').value;
+        const dateRaw = document.getElementById('date_heure').value;
+
+        if (!origin || !destination) return;
+
+        const service = new google.maps.DistanceMatrixService();
+        service.getDistanceMatrix({
+            origins: [origin],
+            destinations: [destination],
+            travelMode: 'DRIVING',
+        }, (response, status) => {
+            if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
+                const element = response.rows[0].elements[0];
+                distanceKm = element.distance.value / 1000;
+                dureeMinutes = Math.ceil(element.duration.value / 60);
+                
+                appliquerTarification(dateRaw);
+            }
+        });
+    }
+
+    function appliquerTarification(dateRaw) {
+        let total = CONFIG.priseEnCharge + (distanceKm * CONFIG.tarifKm);
+        let infos = "";
+
+        if (dateRaw) {
+            const dateObj = new Date(dateRaw);
+            const heure = dateObj.getHours();
+            const jour = dateObj.getDay(); // 0 = Dimanche
+
+            // Majoration Nuit (22h-06h)
+            if (heure >= 22 || heure < 6) {
+                total *= CONFIG.coeffNuit;
+                infos = "Tarif Nuit (+20%)";
+            }
+            // Majoration Dimanche
+            else if (jour === 0) {
+                total *= CONFIG.coeffDimanche;
+                infos = "Tarif Dimanche (+25%)";
+            }
+        }
+
+        // Minimum de perception
+        prixFinal = Math.max(total, CONFIG.tarifMinimum).toFixed(2);
+
+        // Affichage UI
+        document.getElementById('resultat_calcul').style.display = 'block';
+        document.getElementById('prix_affiche').innerText = `${prixFinal} €`;
+        document.getElementById('infos_trajet').innerText = `${distanceKm.toFixed(1)} km | env. ${dureeMinutes} min | ${infos}`;
+    }
+
     function envoyerWhatsApp() {
-        // 1. Récupération des valeurs
         const nom = document.getElementById('nom').value;
         const dep = document.getElementById('depart').value;
         const arr = document.getElementById('arrivee').value;
         const dateRaw = document.getElementById('date_heure').value;
 
-        // Validation simple
         if(!nom || !dep || !arr || !dateRaw) {
-            alert("Merci de remplir tous les champs.");
-            return;
+            alert("Veuillez remplir tous les champs."); return;
         }
 
-        // Formatage de la date pour la lecture
-        const dateObj = new Date(dateRaw);
-        const dateAffichee = dateObj.toLocaleString('fr-FR', { 
-            day: '2-digit', month: '2-digit', year: 'numeric', 
-            hour: '2-digit', minute: '2-digit' 
-        });
+        const dateAffichee = new Date(dateRaw).toLocaleString('fr-FR');
 
-        // 2. Construction du message (format strict pour votre logiciel)
-        // %0A = Retour à la ligne
         const message = `NOUVELLE_COURSE%0A` +
                         `CLIENT: ${nom}%0A` +
                         `DEP: ${dep}%0A` +
                         `ARR: ${arr}%0A` +
+                        `DIST: ${distanceKm.toFixed(1)} km%0A` +
+                        `PRIX: ${prixFinal}€%0A` +
                         `QUAND: ${dateAffichee}`;
 
-        // 3. VOTRE NUMÉRO (Format international sans le +)
-        const monNumero = "33684523297"; // <--- REMPLACEZ PAR VOTRE NUMÉRO
-
-        // 4. Redirection
-        const url = `https://wa.me/${monNumero}?text=${encodeURIComponent(message.replace(/%0A/g, '\n'))}`;
-        window.location.href = url;
+        window.location.href = `https://wa.me/${CONFIG.numWhatsApp}?text=${encodeURIComponent(message.replace(/%0A/g, '\n'))}`;
     }
+
+    window.onload = initAutocomplete;
 </script>
 
 </body>
