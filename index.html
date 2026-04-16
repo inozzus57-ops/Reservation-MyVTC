@@ -4,14 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Réserver ma Course - MyVTC</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCEXSxA3B15lE5w2Dzk-JHwEanBppS14IQ&libraries=places"></script>
     
     <style>
         :root {
             --primary-color: #25D366;
             --dark-color: #075E54;
             --bg-color: #f4f7f6;
-            --accent-color: #34b7f1;
         }
 
         body {
@@ -33,12 +31,17 @@
         }
 
         h2 { color: var(--dark-color); margin-top: 0; text-align: center; }
-
         .form-group { margin-bottom: 15px; }
-
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 0.9rem; }
 
-        input, select {
+        /* Style pour les nouveaux composants Google Autocomplete */
+        gmpx-place-autocomplete {
+            width: 100%;
+            --gmpx-border-radius: 8px;
+            --gmpx-padding: 6px;
+        }
+
+        input {
             width: 100%;
             padding: 12px;
             border: 1px solid #ddd;
@@ -54,13 +57,10 @@
             text-align: center;
             margin: 20px 0;
             border: 1px dashed var(--primary-color);
+            display: none;
         }
 
-        .price-value {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: var(--dark-color);
-        }
+        .price-value { font-size: 1.8rem; font-weight: bold; color: var(--dark-color); }
 
         button {
             width: 100%;
@@ -72,11 +72,9 @@
             font-size: 1.1rem;
             font-weight: bold;
             cursor: pointer;
-            transition: background 0.3s;
         }
 
         button:hover { background-color: #128C7E; }
-        
         .details { font-size: 0.8rem; color: #666; margin-top: 5px; }
     </style>
 </head>
@@ -92,20 +90,20 @@
 
     <div class="form-group">
         <label>Lieu de départ</label>
-        <input type="text" id="depart" placeholder="Saisissez une adresse...">
+        <gmpx-place-autocomplete id="depart" placeholder="Adresse de départ"></gmpx-place-autocomplete>
     </div>
 
     <div class="form-group">
         <label>Destination</label>
-        <input type="text" id="arrivee" placeholder="Saisissez une destination...">
+        <gmpx-place-autocomplete id="arrivee" placeholder="Destination"></gmpx-place-autocomplete>
     </div>
 
     <div class="form-group">
         <label>Date et Heure</label>
-        <input type="datetime-local" id="date_heure" onchange="calculerTrajet()">
+        <input type="datetime-local" id="date_heure">
     </div>
 
-    <div id="resultat_calcul" class="price-box" style="display:none;">
+    <div id="resultat_calcul" class="price-box">
         <div>Estimation du prix</div>
         <div class="price-value" id="prix_affiche">0.00 €</div>
         <div class="details" id="infos_trajet">-- km | -- min</div>
@@ -117,108 +115,113 @@
 </div>
 
 <script>
-    // --- CONFIGURATION TARIFAIRE (A ajuster selon MyVTC) ---
+    // 1. CHARGEMENT ASYNC (Supprime l'erreur de performance)
+    (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=d[q]||(d[q]=new Set),e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Re-options:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
+        key: "AIzaSyCEXSxA3B15lE5w2Dzk-JHwEanBppS14IQ",
+        v: "weekly",
+        language: "fr",
+        region: "FR"
+    });
+
     const CONFIG = {
         priseEnCharge: 3.00,
         tarifKm: 1.50,
         tarifMinimum: 15.00,
-        coeffNuit: 1.50, // +20%
-        coeffDimanche: 1.30, // +25%
+        coeffNuit: 1.50,
+        coeffDimanche: 1.30,
         numWhatsApp: "33684523297"
     };
 
-    let distanceKm = 0;
-    let dureeMinutes = 0;
+    let dist = 0;
+    let minTrajet = 0;
     let prixFinal = 0;
 
-    // Initialisation Google Autocomplete
-    function initAutocomplete() {
-        const options = { componentRestrictions: { country: "fr" }, fields: ["formatted_address"] };
-        const autoDep = new google.maps.places.Autocomplete(document.getElementById('depart'), options);
-        const autoArr = new google.maps.places.Autocomplete(document.getElementById('arrivee'), options);
+    async function init() {
+        // Importation des bibliothèques Places et Routes (Distance Matrix)
+        const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
+        const { DistanceMatrixService } = await google.maps.importLibrary("routes");
 
-        autoDep.addListener('place_changed', calculerTrajet);
-        autoArr.addListener('place_changed', calculerTrajet);
+        const elDep = document.getElementById('depart');
+        const elArr = document.getElementById('arrivee');
+
+        // Écouter les changements sur les nouveaux composants Google
+        elDep.addEventListener('gmpx-placechange', () => calculer(DistanceMatrixService));
+        elArr.addEventListener('gmpx-placechange', () => calculer(DistanceMatrixService));
+        document.getElementById('date_heure').addEventListener('change', () => calculer(DistanceMatrixService));
     }
 
-    // Calcul de la distance et du prix
-    function calculerTrajet() {
+    async function calculer(DistanceMatrixService) {
+        // Récupération des valeurs textuelles des composants Google
         const origin = document.getElementById('depart').value;
         const destination = document.getElementById('arrivee').value;
         const dateRaw = document.getElementById('date_heure').value;
 
         if (!origin || !destination) return;
 
-        const service = new google.maps.DistanceMatrixService();
+        const service = new DistanceMatrixService();
         service.getDistanceMatrix({
             origins: [origin],
             destinations: [destination],
             travelMode: 'DRIVING',
         }, (response, status) => {
             if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
-                const element = response.rows[0].elements[0];
-                distanceKm = element.distance.value / 1000;
-                dureeMinutes = Math.ceil(element.duration.value / 60);
+                const data = response.rows[0].elements[0];
+                dist = data.distance.value / 1000;
+                minTrajet = Math.ceil(data.duration.value / 60);
                 
-                appliquerTarification(dateRaw);
+                appliquerTarif(dateRaw);
             }
         });
     }
 
-    function appliquerTarification(dateRaw) {
-        let total = CONFIG.priseEnCharge + (distanceKm * CONFIG.tarifKm);
-        let infos = "";
+    function appliquerTarif(dateRaw) {
+        let total = CONFIG.priseEnCharge + (dist * CONFIG.tarifKm);
+        let labelMajoration = "";
 
         if (dateRaw) {
             const dateObj = new Date(dateRaw);
-            const heure = dateObj.getHours();
-            const jour = dateObj.getDay(); // 0 = Dimanche
+            const h = dateObj.getHours();
+            const j = dateObj.getDay(); // 0 = Dimanche
 
-            // Majoration Nuit (22h-06h)
-            if (heure >= 22 || heure < 6) {
+            if (h >= 22 || h < 6) {
                 total *= CONFIG.coeffNuit;
-                infos = "Tarif Nuit (+20%)";
-            }
-            // Majoration Dimanche
-            else if (jour === 0) {
+                labelMajoration = "Tarif Nuit";
+            } else if (j === 0) {
                 total *= CONFIG.coeffDimanche;
-                infos = "Tarif Dimanche (+25%)";
+                labelMajoration = "Tarif Dimanche";
             }
         }
 
-        // Minimum de perception
         prixFinal = Math.max(total, CONFIG.tarifMinimum).toFixed(2);
 
-        // Affichage UI
         document.getElementById('resultat_calcul').style.display = 'block';
         document.getElementById('prix_affiche').innerText = `${prixFinal} €`;
-        document.getElementById('infos_trajet').innerText = `${distanceKm.toFixed(1)} km | env. ${dureeMinutes} min | ${infos}`;
+        document.getElementById('infos_trajet').innerText = `${dist.toFixed(1)} km | env. ${minTrajet} min | ${labelMajoration}`;
     }
 
     function envoyerWhatsApp() {
         const nom = document.getElementById('nom').value;
         const dep = document.getElementById('depart').value;
         const arr = document.getElementById('arrivee').value;
-        const dateRaw = document.getElementById('date_heure').value;
+        const date = document.getElementById('date_heure').value;
 
-        if(!nom || !dep || !arr || !dateRaw) {
+        if(!nom || !dep || !arr || !date) {
             alert("Veuillez remplir tous les champs."); return;
         }
 
-        const dateAffichee = new Date(dateRaw).toLocaleString('fr-FR');
+        const msg = `NOUVELLE_COURSE%0A` +
+                    `CLIENT: ${nom}%0A` +
+                    `DEP: ${dep}%0A` +
+                    `ARR: ${arr}%0A` +
+                    `DIST: ${dist.toFixed(1)} km%0A` +
+                    `PRIX: ${prixFinal}€%0A` +
+                    `QUAND: ${new Date(date).toLocaleString('fr-FR')}`;
 
-        const message = `NOUVELLE_COURSE%0A` +
-                        `CLIENT: ${nom}%0A` +
-                        `DEP: ${dep}%0A` +
-                        `ARR: ${arr}%0A` +
-                        `DIST: ${distanceKm.toFixed(1)} km%0A` +
-                        `PRIX: ${prixFinal}€%0A` +
-                        `QUAND: ${dateAffichee}`;
-
-        window.location.href = `https://wa.me/${CONFIG.numWhatsApp}?text=${encodeURIComponent(message.replace(/%0A/g, '\n'))}`;
+        window.location.href = `https://wa.me/${CONFIG.numWhatsApp}?text=${encodeURIComponent(msg.replace(/%0A/g, '\n'))}`;
     }
 
-    window.onload = initAutocomplete;
+    // Lancement de l'initialisation
+    init();
 </script>
 
 </body>
