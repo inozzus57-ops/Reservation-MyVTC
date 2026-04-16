@@ -5,73 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Réserver ma Course - MyVTC</title>
     <link rel="icon" href="data:,">
+    <script src="https://unpkg.com/@googlemaps/extended-component-library"></script>
     <style>
-        :root {
-            --primary-color: #25D366;
-            --dark-color: #075E54;
-            --bg-color: #f4f7f6;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-            margin: 0;
-        }
-
-        .card {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 450px;
-        }
-
-        h2 { color: var(--dark-color); margin-top: 0; text-align: center; }
+        :root { --primary-color: #25D366; --dark-color: #075E54; --bg-color: #f4f7f6; }
+        body { font-family: sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding: 20px; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        h2 { color: var(--dark-color); text-align: center; margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 0.9rem; }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 1rem;
-            outline: none;
-        }
-
-        input:focus { border-color: var(--primary-color); }
-
-        .price-box {
-            background: #e7f3ef;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            margin: 20px 0;
-            border: 1px dashed var(--primary-color);
-            display: none;
-        }
-
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        .price-box { background: #e7f3ef; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; border: 1px dashed var(--primary-color); display: none; }
         .price-value { font-size: 1.8rem; font-weight: bold; color: var(--dark-color); }
-
-        button {
-            width: 100%;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        button:hover { background-color: #128C7E; }
+        button { width: 100%; background-color: var(--primary-color); color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-calc { background-color: #34b7f1; margin-bottom: 10px; font-size: 0.9rem; padding: 10px; }
         .details { font-size: 0.8rem; color: #666; margin-top: 5px; }
     </style>
 </head>
@@ -82,17 +28,17 @@
     
     <div class="form-group">
         <label>Nom complet</label>
-        <input type="text" id="nom" placeholder="Ex: Jean Dupont">
+        <input type="text" id="nom" placeholder="Jean Dupont">
     </div>
 
     <div class="form-group">
         <label>Lieu de départ</label>
-        <input type="text" id="depart" placeholder="Saisissez une adresse...">
+        <input type="text" id="depart" placeholder="Adresse, Ville, Aéroport...">
     </div>
 
     <div class="form-group">
         <label>Destination</label>
-        <input type="text" id="arrivee" placeholder="Saisissez une destination...">
+        <input type="text" id="arrivee" placeholder="Adresse d'arrivée...">
     </div>
 
     <div class="form-group">
@@ -100,114 +46,94 @@
         <input type="datetime-local" id="date_heure">
     </div>
 
+    <button type="button" class="btn-calc" onclick="window.forcerCalcul()">🔄 Calculer le prix</button>
+
     <div id="resultat_calcul" class="price-box">
         <div>Estimation du prix</div>
         <div class="price-value" id="prix_affiche">0.00 €</div>
-        <div class="details" id="infos_trajet">-- km | -- min</div>
+        <div id="infos_trajet" class="details">-- km</div>
     </div>
 
-    <button onclick="window.envoyerWhatsApp()">
-        Valider et Envoyer via WhatsApp
-    </button>
+    <button onclick="window.envoyerWhatsApp()">Confirmer via WhatsApp</button>
 </div>
 
 <script type="module">
-    // 1. Chargeur Google Maps (Méthode Best-Practice 2026)
+    // Chargeur Google Maps
     (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=d[q]||(d[q]=new Set),e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Re-options:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
         key: "AIzaSyCEXSxA3B15lE5w2Dzk-JHwEanBppS14IQ",
         v: "weekly"
     });
 
-    const CONFIG = {
-        priseEnCharge: 3.00,
-        tarifKm: 1.50,
-        tarifMinimum: 15.00,
-        coeffNuit: 1.50,
-        coeffDimanche: 1.30,
-        numWhatsApp: "33684523297"
-    };
-
-    let dist = 0;
-    let prixFinal = 0;
+    let dist = 0, prixFinal = 0;
 
     async function init() {
         const { Autocomplete } = await google.maps.importLibrary("places");
         const { DistanceMatrixService } = await google.maps.importLibrary("routes");
 
-        const options = { componentRestrictions: { country: "fr" }, fields: ["formatted_address"] };
-        const autoDep = new Autocomplete(document.getElementById('depart'), options);
-        const autoArr = new Autocomplete(document.getElementById('arrivee'), options);
+        const opts = { componentRestrictions: { country: "fr" }, fields: ["formatted_address"] };
+        const autoDep = new Autocomplete(document.getElementById('depart'), opts);
+        const autoArr = new Autocomplete(document.getElementById('arrivee'), opts);
 
+        // Déclenchement automatique
         const maj = () => calculer(DistanceMatrixService);
-        
         autoDep.addListener('place_changed', maj);
         autoArr.addListener('place_changed', maj);
-        document.getElementById('date_heure').addEventListener('change', maj);
+
+        // Exposer la fonction de calcul pour le bouton manuel
+        window.forcerCalcul = maj;
     }
 
     async function calculer(DistanceMatrixService) {
-        const origin = document.getElementById('depart').value;
-        const destination = document.getElementById('arrivee').value;
-        const dateRaw = document.getElementById('date_heure').value;
+        const d = document.getElementById('depart').value;
+        const a = document.getElementById('arrivee').value;
+        const dt = document.getElementById('date_heure').value;
 
-        if (!origin || !destination) return;
+        if (!d || !a) return;
 
         const service = new DistanceMatrixService();
         service.getDistanceMatrix({
-            origins: [origin],
-            destinations: [destination],
-            travelMode: 'DRIVING',
-        }, (response, status) => {
-            if (status === 'OK') {
-                const element = response.rows[0].elements[0];
-                if (element.status === 'OK') {
-                    dist = element.distance.value / 1000;
-                    
-                    let total = CONFIG.priseEnCharge + (dist * CONFIG.tarifKm);
-                    let label = "";
-
-                    if (dateRaw) {
-                        const dateObj = new Date(dateRaw);
-                        const h = dateObj.getHours();
-                        const j = dateObj.getDay();
-                        if (h >= 22 || h < 6) { total *= CONFIG.coeffNuit; label = " (Nuit)"; }
-                        else if (j === 0) { total *= CONFIG.coeffDimanche; label = " (Dimanche)"; }
-                    }
-
-                    prixFinal = Math.max(total, CONFIG.tarifMinimum).toFixed(2);
-                    
-                    document.getElementById('resultat_calcul').style.display = 'block';
-                    document.getElementById('prix_affiche').innerText = `${prixFinal} €`;
-                    document.getElementById('infos_trajet').innerText = `${dist.toFixed(1)} km | ${label}`;
+            origins: [d], destinations: [a], travelMode: 'DRIVING'
+        }, (res, stat) => {
+            if (stat === 'OK' && res.rows[0].elements[0].status === 'OK') {
+                const e = res.rows[0].elements[0];
+                dist = e.distance.value / 1000;
+                
+                // Calcul base MyVTC
+                let total = 3.00 + (dist * 1.50);
+                
+                // Majoration Nuit / Dimanche
+                if (dt) {
+                    const dateObj = new Date(dt);
+                    const h = dateObj.getHours();
+                    const j = dateObj.getDay();
+                    if (h >= 22 || h < 6) total *= 1.50; // Nuit
+                    else if (j === 0) total *= 1.30; // Dimanche
                 }
+
+                prixFinal = Math.max(total, 15.00).toFixed(2);
+                
+                document.getElementById('resultat_calcul').style.display = 'block';
+                document.getElementById('prix_affiche').innerText = prixFinal + " €";
+                document.getElementById('infos_trajet').innerText = dist.toFixed(1) + " km";
+            } else {
+                console.log("Erreur Distance Matrix:", stat);
             }
         });
     }
 
-    // On attache la fonction à l'objet window pour qu'elle soit accessible depuis le HTML (type="module")
     window.envoyerWhatsApp = function() {
         const nom = document.getElementById('nom').value;
         const dep = document.getElementById('depart').value;
         const arr = document.getElementById('arrivee').value;
-        const date = document.getElementById('date_heure').value;
+        const quand = document.getElementById('date_heure').value;
 
-        if(!nom || !dep || !arr || !date) {
-            alert("Merci de remplir tous les champs."); return;
-        }
+        if(!nom || !dep || !arr || !quand) { alert("Remplissez tous les champs"); return; }
 
-        const message = `NOUVELLE_COURSE%0A` +
-                        `CLIENT: ${nom}%0A` +
-                        `DEP: ${dep}%0A` +
-                        `ARR: ${arr}%0A` +
-                        `DIST: ${dist.toFixed(1)} km%0A` +
-                        `PRIX: ${prixFinal}€%0A` +
-                        `QUAND: ${new Date(date).toLocaleString('fr-FR')}`;
-
-        window.location.href = `https://wa.me/${CONFIG.numWhatsApp}?text=${encodeURIComponent(message.replace(/%0A/g, '\n'))}`;
+        const msg = `NOUVELLE_COURSE\nCLIENT: ${nom}\nDEP: ${dep}\nARR: ${arr}\nDIST: ${dist.toFixed(1)} km\nPRIX: ${prixFinal}€\nQUAND: ${new Date(quand).toLocaleString('fr-FR')}`;
+        window.location.href = `https://wa.me/33684523297?text=${encodeURIComponent(msg)}`;
     };
 
     init();
 </script>
-
 </body>
 </html>
