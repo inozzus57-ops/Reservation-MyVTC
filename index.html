@@ -5,133 +5,744 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Réserver ma Course - MyVTC</title>
     <link rel="icon" href="data:,">
-    <script src="https://unpkg.com/@googlemaps/extended-component-library"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
-        :root { --primary-color: #25D366; --dark-color: #075E54; --bg-color: #f4f7f6; }
-        body { font-family: sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding: 20px; }
-        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
-        h2 { color: var(--dark-color); text-align: center; margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
-        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
-        .price-box { background: #e7f3ef; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; border: 1px dashed var(--primary-color); display: none; }
-        .price-value { font-size: 1.8rem; font-weight: bold; color: var(--dark-color); }
-        button { width: 100%; background-color: var(--primary-color); color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-calc { background-color: #34b7f1; margin-bottom: 10px; font-size: 0.9rem; padding: 10px; }
-        .details { font-size: 0.8rem; color: #666; margin-top: 5px; }
+        :root {
+            --green: #1DB954;
+            --green-dark: #0a8c3a;
+            --green-light: #e8f8ee;
+            --night: #0d1117;
+            --ink: #1a1a2e;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --white: #ffffff;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --error: #ef4444;
+            --radius: 14px;
+            --shadow: 0 20px 60px rgba(0,0,0,0.08);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: linear-gradient(135deg, #0d1117 0%, #1a1a2e 50%, #0d2818 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 30px 16px 60px;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 460px;
+            overflow: hidden;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.4);
+            animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--ink) 0%, #1a2e1a 100%);
+            padding: 28px 28px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: -50px; right: -50px;
+            width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(29,185,84,0.15) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .brand-icon {
+            width: 40px; height: 40px;
+            background: var(--green);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+        }
+
+        .brand-name {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: white;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-sub {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+            font-weight: 300;
+        }
+
+        .card-body { padding: 24px 28px 28px; }
+
+        .section-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 14px;
+            margin-top: 22px;
+        }
+
+        .section-title:first-child { margin-top: 0; }
+
+        .form-group { margin-bottom: 14px; position: relative; }
+
+        label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--ink);
+            margin-bottom: 6px;
+        }
+
+        .input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 13px;
+            font-size: 16px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 11px 12px 11px 38px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--ink);
+            background: #fafafa;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--green);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(29,185,84,0.1);
+        }
+
+        input::placeholder { color: #b0b7c3; }
+
+        .input-btn {
+            position: absolute;
+            right: 8px;
+            background: var(--green-light);
+            border: none;
+            border-radius: 8px;
+            padding: 5px 8px;
+            font-size: 0.75rem;
+            color: var(--green-dark);
+            cursor: pointer;
+            font-weight: 500;
+            width: auto;
+            margin: 0;
+            transition: background 0.2s;
+        }
+
+        .input-btn:hover { background: #c8f0d6; }
+
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        select { padding-left: 38px; appearance: none; cursor: pointer; }
+
+        /* Type pills */
+        .type-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .type-pill {
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafafa;
+        }
+
+        .type-pill.active {
+            border-color: var(--green);
+            background: var(--green-light);
+        }
+
+        .type-pill .emoji { font-size: 1.3rem; display: block; margin-bottom: 3px; }
+        .type-pill .label { font-size: 0.78rem; font-weight: 500; color: var(--ink); }
+        .type-pill .sublabel { font-size: 0.68rem; color: var(--muted); }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 20px 0;
+        }
+
+        /* Price box */
+        .price-box {
+            background: linear-gradient(135deg, #f0fdf4, #e8f8ee);
+            border: 1.5px solid #bbf7d0;
+            border-radius: var(--radius);
+            padding: 18px;
+            margin: 18px 0;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .price-box.visible { display: block; }
+
+        .price-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .price-main { font-family: 'Syne', sans-serif; }
+        .price-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 2px; }
+        .price-value { font-size: 2rem; font-weight: 800; color: var(--green-dark); line-height: 1; }
+        .price-sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+        .price-badge {
+            background: var(--green);
+            color: white;
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .price-breakdown {
+            border-top: 1px dashed #bbf7d0;
+            padding-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .breakdown-item {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .breakdown-item strong { color: var(--ink); display: block; font-size: 0.82rem; }
+
+        .majoration-badge {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            color: #92400e;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .airport-badge {
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            color: #1e40af;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            border: none;
+            padding: 14px;
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            font-weight: 600;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-calc {
+            background: #f1f5f9;
+            color: var(--ink);
+            margin-bottom: 10px;
+        }
+
+        .btn-calc:hover { background: #e2e8f0; }
+
+        .btn-whatsapp {
+            background: linear-gradient(135deg, #25D366, #1DB954);
+            color: white;
+            box-shadow: 0 4px 15px rgba(29,185,84,0.3);
+        }
+
+        .btn-whatsapp:hover {
+            box-shadow: 0 6px 20px rgba(29,185,84,0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn-whatsapp:active { transform: translateY(0); }
+
+        /* Error / info states */
+        .field-error {
+            font-size: 0.75rem;
+            color: var(--error);
+            margin-top: 4px;
+            display: none;
+        }
+
+        .field-error.show { display: block; }
+
+        input.error { border-color: var(--error); }
+
+        /* Loading state */
+        .loading {
+            display: inline-block;
+            width: 14px; height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Footer */
+        .card-footer {
+            background: #f8fafc;
+            border-top: 1px solid var(--border);
+            padding: 14px 28px;
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        /* Autocomplete override */
+        .pac-container {
+            border-radius: 12px !important;
+            border: 1.5px solid var(--border) !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+            font-family: 'DM Sans', sans-serif !important;
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 0; align-items: flex-start; }
+            .card { border-radius: 0; min-height: 100vh; }
+        }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>🚕 Réserver mon VTC</h2>
-    
-    <div class="form-group">
-        <label>Nom complet</label>
-        <input type="text" id="nom" placeholder="Jean Dupont">
+    <div class="card-header">
+        <div class="brand">
+            <div class="brand-icon">🚕</div>
+            <div>
+                <div class="brand-name">MyVTC</div>
+                <div class="brand-sub">Réservation en ligne · Île-de-France</div>
+            </div>
+        </div>
     </div>
 
-    <div class="form-group">
-        <label>Lieu de départ</label>
-        <input type="text" id="depart" placeholder="Adresse, Ville, Aéroport...">
+    <div class="card-body">
+
+        <!-- CLIENT -->
+        <div class="section-title">Vos coordonnées</div>
+
+        <div class="row">
+            <div class="form-group">
+                <label>Nom complet *</label>
+                <div class="input-wrap">
+                    <span class="input-icon">👤</span>
+                    <input type="text" id="nom" placeholder="Jean Dupont" autocomplete="name">
+                </div>
+                <div class="field-error" id="err-nom">Nom requis</div>
+            </div>
+            <div class="form-group">
+                <label>Téléphone *</label>
+                <div class="input-wrap">
+                    <span class="input-icon">📱</span>
+                    <input type="tel" id="telephone" placeholder="06 12 34 56 78" autocomplete="tel">
+                </div>
+                <div class="field-error" id="err-tel">Téléphone requis</div>
+            </div>
+        </div>
+
+        <!-- TRAJET -->
+        <div class="section-title">Votre trajet</div>
+
+        <div class="form-group">
+            <label>Type de course</label>
+            <div class="type-selector">
+                <div class="type-pill active" id="pill-trajet" onclick="setType('trajet')">
+                    <span class="emoji">🏁</span>
+                    <div class="label">Trajet sec</div>
+                    <div class="sublabel">TVA 10%</div>
+                </div>
+                <div class="type-pill" id="pill-miseadispo" onclick="setType('miseadispo')">
+                    <span class="emoji">⏱️</span>
+                    <div class="label">Mise à dispo</div>
+                    <div class="sublabel">TVA 20%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Lieu de départ *</label>
+            <div class="input-wrap">
+                <span class="input-icon">📍</span>
+                <input type="text" id="depart" placeholder="Adresse, ville, aéroport...">
+                <button class="input-btn" onclick="useMyLocation()" title="Ma position">📡 GPS</button>
+            </div>
+            <div class="field-error" id="err-dep">Adresse de départ requise</div>
+        </div>
+
+        <div class="form-group">
+            <label>Destination *</label>
+            <div class="input-wrap">
+                <span class="input-icon">🏁</span>
+                <input type="text" id="arrivee" placeholder="Adresse d'arrivée...">
+            </div>
+            <div class="field-error" id="err-arr">Destination requise</div>
+        </div>
+
+        <div class="form-group">
+            <label>Date et heure souhaitées *</label>
+            <div class="input-wrap">
+                <span class="input-icon">📅</span>
+                <input type="datetime-local" id="date_heure">
+            </div>
+            <div class="field-error" id="err-date">Date requise (future)</div>
+        </div>
+
+        <div class="form-group">
+            <label>Nombre de passagers</label>
+            <div class="input-wrap">
+                <span class="input-icon">👥</span>
+                <select id="passagers">
+                    <option value="1">1 passager</option>
+                    <option value="2">2 passagers</option>
+                    <option value="3">3 passagers</option>
+                    <option value="4">4 passagers</option>
+                    <option value="5">5 passagers</option>
+                    <option value="6">6 passagers</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Informations complémentaires</label>
+            <div class="input-wrap">
+                <span class="input-icon">💬</span>
+                <input type="text" id="notes" placeholder="Bagage encombrant, animaux, besoins spéciaux...">
+            </div>
+        </div>
+
+        <!-- ESTIMATION -->
+        <button class="btn btn-calc" onclick="window.forcerCalcul()">
+            🔄 Calculer l'estimation
+        </button>
+
+        <div id="resultat_calcul" class="price-box">
+            <div class="price-header">
+                <div class="price-main">
+                    <div class="price-label">Estimation du prix</div>
+                    <div class="price-value" id="prix_affiche">—</div>
+                    <div class="price-sub" id="prix_ht_sub"></div>
+                </div>
+                <div id="type-badge" class="price-badge">Trajet sec</div>
+            </div>
+            <div id="majoration_nuit" class="majoration-badge" style="display:none">
+                🌙 Majoration nuit appliquée (+50%)
+            </div>
+            <div id="majoration_dimanche" class="majoration-badge" style="display:none">
+                📅 Majoration dimanche appliquée (+30%)
+            </div>
+            <div id="majoration_aeroport" class="airport-badge" style="display:none">
+                ✈️ Supplément aéroport inclus (+10€)
+            </div>
+            <div class="price-breakdown">
+                <div class="breakdown-item">
+                    <strong id="dist_affiche">—</strong>
+                    Distance estimée
+                </div>
+                <div class="breakdown-item">
+                    <strong id="duree_affiche">—</strong>
+                    Durée estimée
+                </div>
+                <div class="breakdown-item">
+                    <strong id="ht_affiche">—</strong>
+                    Prix HT
+                </div>
+                <div class="breakdown-item">
+                    <strong id="tva_affiche">—</strong>
+                    TVA
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-whatsapp" onclick="window.envoyerWhatsApp()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Confirmer via WhatsApp
+        </button>
+
     </div>
 
-    <div class="form-group">
-        <label>Destination</label>
-        <input type="text" id="arrivee" placeholder="Adresse d'arrivée...">
+    <div class="card-footer">
+        🔒 Vos données ne sont pas stockées · Tarifs indicatifs TTC<br>
+        Chauffeur VTC professionnel · Île-de-France
     </div>
-
-    <div class="form-group">
-        <label>Date et Heure</label>
-        <input type="datetime-local" id="date_heure">
-    </div>
-
-    <button type="button" class="btn-calc" onclick="window.forcerCalcul()">🔄 Calculer le prix</button>
-
-    <div id="resultat_calcul" class="price-box">
-        <div>Estimation du prix</div>
-        <div class="price-value" id="prix_affiche">0.00 €</div>
-        <div id="infos_trajet" class="details">-- km</div>
-    </div>
-
-    <button onclick="window.envoyerWhatsApp()">Confirmer via WhatsApp</button>
 </div>
 
 <script type="module">
-    // Chargeur Google Maps
-    (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=d[q]||(d[q]=new Set),e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Re-options:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
-        key: "AIzaSyCEXSxA3B15lE5w2Dzk-JHwEanBppS14IQ",
-        v: "weekly"
-    });
+    // ═══════════════════════════════════════
+    // CONFIGURATION — À ADAPTER
+    // ═══════════════════════════════════════
+    const CONFIG = {
+        // Tarifs (synchronisés avec MyVTC)
+        PRISE_EN_CHARGE: 3.00,       // € fixe au départ
+        TARIF_KM: 1.80,              // € par km
+        PRIX_MINIMUM: 15.00,         // € minimum
+        SUPPLEMENT_AEROPORT: 10.00,  // € si aéroport détecté
+        TVA_TRAJET: 0.10,            // 10%
+        TVA_MISEADISPO: 0.20,        // 20%
+        // Majorations
+        MAJORATION_NUIT: 1.50,       // x1.5 entre 22h et 6h
+        MAJORATION_DIMANCHE: 1.30,   // x1.3 le dimanche
+        // WhatsApp chauffeur
+        WHATSAPP_NUMBER: "33684523297",
+        // Google Maps API
+        MAPS_KEY: "AIzaSyCEXSxA3B15lE5w2Dzk-JHwEanBppS14IQ"
+    };
 
-    let dist = 0, prixFinal = 0;
+    // Aéroports détectés automatiquement
+    const AEROPORTS = ['cdg', 'charles de gaulle', 'roissy', 'orly', 'beauvais', 'le bourget'];
 
-    async function init() {
-        const { Autocomplete } = await google.maps.importLibrary("places");
-        const { DistanceMatrixService } = await google.maps.importLibrary("routes");
+    // ═══════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════
+    let dist = 0, dureeMin = 0, prixFinal = 0, prixHT = 0, montantTVA = 0;
+    let typeCourse = 'trajet'; // 'trajet' ou 'miseadispo'
+    let distanceMatrixService = null;
 
-        const opts = { componentRestrictions: { country: "fr" }, fields: ["formatted_address"] };
-        const autoDep = new Autocomplete(document.getElementById('depart'), opts);
-        const autoArr = new Autocomplete(document.getElementById('arrivee'), opts);
+    // ═══════════════════════════════════════
+    // TYPE DE COURSE
+    // ═══════════════════════════════════════
+    window.setType = function(type) {
+        typeCourse = type;
+        document.getElementById('pill-trajet').classList.toggle('active', type === 'trajet');
+        document.getElementById('pill-miseadispo').classList.toggle('active', type === 'miseadispo');
+        if (dist > 0) calculer();
+    };
 
-        // Déclenchement automatique
-        const maj = () => calculer(DistanceMatrixService);
-        autoDep.addListener('place_changed', maj);
-        autoArr.addListener('place_changed', maj);
+    // ═══════════════════════════════════════
+    // GPS
+    // ═══════════════════════════════════════
+    window.useMyLocation = function() {
+        if (!navigator.geolocation) return alert("Géolocalisation non supportée");
+        navigator.geolocation.getCurrentPosition(async pos => {
+            const { Geocoder } = await google.maps.importLibrary("geocoding");
+            const geocoder = new Geocoder();
+            geocoder.geocode({ location: { lat: pos.coords.latitude, lng: pos.coords.longitude } }, (results, status) => {
+                if (status === 'OK' && results[0]) {
+                    document.getElementById('depart').value = results[0].formatted_address;
+                    calculer();
+                }
+            });
+        }, () => alert("Impossible d'obtenir votre position"));
+    };
 
-        // Exposer la fonction de calcul pour le bouton manuel
-        window.forcerCalcul = maj;
+    // ═══════════════════════════════════════
+    // VALIDATION
+    // ═══════════════════════════════════════
+    function validate() {
+        let ok = true;
+        const fields = [
+            { id: 'nom', err: 'err-nom', check: v => v.trim().length >= 2 },
+            { id: 'telephone', err: 'err-tel', check: v => v.trim().length >= 8 },
+            { id: 'depart', err: 'err-dep', check: v => v.trim().length >= 3 },
+            { id: 'arrivee', err: 'err-arr', check: v => v.trim().length >= 3 },
+            { id: 'date_heure', err: 'err-date', check: v => v && new Date(v) > new Date() },
+        ];
+        fields.forEach(f => {
+            const val = document.getElementById(f.id).value;
+            const valid = f.check(val);
+            document.getElementById(f.id).classList.toggle('error', !valid);
+            document.getElementById(f.err).classList.toggle('show', !valid);
+            if (!valid) ok = false;
+        });
+        return ok;
     }
 
-    async function calculer(DistanceMatrixService) {
+    // ═══════════════════════════════════════
+    // DÉTECTION AÉROPORT
+    // ═══════════════════════════════════════
+    function isAeroport(adresse) {
+        const a = adresse.toLowerCase();
+        return AEROPORTS.some(kw => a.includes(kw));
+    }
+
+    // ═══════════════════════════════════════
+    // CALCUL PRIX
+    // ═══════════════════════════════════════
+    async function calculer() {
         const d = document.getElementById('depart').value;
         const a = document.getElementById('arrivee').value;
         const dt = document.getElementById('date_heure').value;
-
         if (!d || !a) return;
 
-        const service = new DistanceMatrixService();
-        service.getDistanceMatrix({
+        if (!distanceMatrixService) {
+            const { DistanceMatrixService } = await google.maps.importLibrary("routes");
+            distanceMatrixService = new DistanceMatrixService();
+        }
+
+        distanceMatrixService.getDistanceMatrix({
             origins: [d], destinations: [a], travelMode: 'DRIVING'
         }, (res, stat) => {
-            if (stat === 'OK' && res.rows[0].elements[0].status === 'OK') {
-                const e = res.rows[0].elements[0];
-                dist = e.distance.value / 1000;
-                
-                // Calcul base MyVTC
-                let total = 3.00 + (dist * 1.50);
-                
-                // Majoration Nuit / Dimanche
-                if (dt) {
-                    const dateObj = new Date(dt);
-                    const h = dateObj.getHours();
-                    const j = dateObj.getDay();
-                    if (h >= 22 || h < 6) total *= 1.50; // Nuit
-                    else if (j === 0) total *= 1.30; // Dimanche
-                }
+            if (stat !== 'OK' || res.rows[0].elements[0].status !== 'OK') return;
 
-                prixFinal = Math.max(total, 15.00).toFixed(2);
-                
-                document.getElementById('resultat_calcul').style.display = 'block';
-                document.getElementById('prix_affiche').innerText = prixFinal + " €";
-                document.getElementById('infos_trajet').innerText = dist.toFixed(1) + " km";
-            } else {
-                console.log("Erreur Distance Matrix:", stat);
+            const el = res.rows[0].elements[0];
+            dist = el.distance.value / 1000;
+            dureeMin = Math.round(el.duration.value / 60);
+
+            const tva = typeCourse === 'trajet' ? CONFIG.TVA_TRAJET : CONFIG.TVA_MISEADISPO;
+            let base = CONFIG.PRISE_EN_CHARGE + (dist * CONFIG.TARIF_KM);
+
+            // Majorations temporelles
+            let majNuit = false, majDim = false;
+            if (dt) {
+                const dateObj = new Date(dt);
+                const h = dateObj.getHours();
+                const j = dateObj.getDay();
+                if (h >= 22 || h < 6) { base *= CONFIG.MAJORATION_NUIT; majNuit = true; }
+                else if (j === 0) { base *= CONFIG.MAJORATION_DIMANCHE; majDim = true; }
             }
+
+            // Supplément aéroport
+            let majAero = isAeroport(d) || isAeroport(a);
+            if (majAero) base += CONFIG.SUPPLEMENT_AEROPORT;
+
+            // Minimum
+            base = Math.max(base, CONFIG.PRIX_MINIMUM);
+
+            // TVA
+            prixHT = base / (1 + tva);
+            montantTVA = base - prixHT;
+            prixFinal = base.toFixed(2);
+
+            // Affichage
+            const box = document.getElementById('resultat_calcul');
+            box.classList.add('visible');
+            document.getElementById('prix_affiche').innerText = prixFinal + " €";
+            document.getElementById('prix_ht_sub').innerText = `TTC · HT : ${prixHT.toFixed(2)} €`;
+            document.getElementById('dist_affiche').innerText = dist.toFixed(1) + " km";
+            document.getElementById('duree_affiche').innerText = dureeMin + " min";
+            document.getElementById('ht_affiche').innerText = prixHT.toFixed(2) + " €";
+            document.getElementById('tva_affiche').innerText = `${montantTVA.toFixed(2)} € (${(tva*100).toFixed(0)}%)`;
+            document.getElementById('type-badge').innerText = typeCourse === 'trajet' ? 'Trajet sec' : 'Mise à dispo';
+            document.getElementById('majoration_nuit').style.display = majNuit ? 'flex' : 'none';
+            document.getElementById('majoration_dimanche').style.display = majDim ? 'flex' : 'none';
+            document.getElementById('majoration_aeroport').style.display = majAero ? 'flex' : 'none';
         });
     }
 
+    window.forcerCalcul = calculer;
+
+    // ═══════════════════════════════════════
+    // ENVOI WHATSAPP
+    // ═══════════════════════════════════════
     window.envoyerWhatsApp = function() {
-        const nom = document.getElementById('nom').value;
-        const dep = document.getElementById('depart').value;
-        const arr = document.getElementById('arrivee').value;
+        if (!validate()) return;
+
+        const nom = document.getElementById('nom').value.trim();
+        const tel = document.getElementById('telephone').value.trim();
+        const dep = document.getElementById('depart').value.trim();
+        const arr = document.getElementById('arrivee').value.trim();
         const quand = document.getElementById('date_heure').value;
+        const passagers = document.getElementById('passagers').value;
+        const notes = document.getElementById('notes').value.trim();
+        const type = typeCourse === 'trajet' ? 'Trajet sec' : 'Mise à disposition';
 
-        if(!nom || !dep || !arr || !quand) { alert("Remplissez tous les champs"); return; }
+        const dateFormatee = new Date(quand).toLocaleString('fr-FR', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
 
-        const msg = `NOUVELLE_COURSE\nCLIENT: ${nom}\nDEP: ${dep}\nARR: ${arr}\nDIST: ${dist.toFixed(1)} km\nPRIX: ${prixFinal}€\nQUAND: ${new Date(quand).toLocaleString('fr-FR')}`;
-        window.location.href = `https://wa.me/33684523297?text=${encodeURIComponent(msg)}`;
+        let msg = `NOUVELLE_COURSE\nCLIENT: ${nom}\nTEL: ${tel}\nDEP: ${dep}\nARR: ${arr}\nQUAND: ${dateFormatee}\nTYPE: ${type}\nPAX: ${passagers}`;
+        if (dist > 0) msg += `\nDIST: ${dist.toFixed(1)} km\nPRIX: ${prixFinal}€\nHT: ${prixHT.toFixed(2)}€\nTVA: ${montantTVA.toFixed(2)}€`;
+        if (notes) msg += `\nNOTES: ${notes}`;
+
+        window.location.href = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
     };
+
+    // ═══════════════════════════════════════
+    // GOOGLE MAPS INIT
+    // ═══════════════════════════════════════
+    (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=d[q]||(d[q]=new Set),e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Re-options:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
+        key: CONFIG.MAPS_KEY, v: "weekly"
+    });
+
+    async function init() {
+        const { Autocomplete } = await google.maps.importLibrary("places");
+        const opts = { componentRestrictions: { country: "fr" }, fields: ["formatted_address"] };
+        const autoDep = new Autocomplete(document.getElementById('depart'), opts);
+        const autoArr = new Autocomplete(document.getElementById('arrivee'), opts);
+        autoDep.addListener('place_changed', calculer);
+        autoArr.addListener('place_changed', calculer);
+
+        // Date minimum = maintenant
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('date_heure').min = now.toISOString().slice(0,16);
+    }
 
     init();
 </script>
